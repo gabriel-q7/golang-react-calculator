@@ -11,7 +11,8 @@ serves the compiled frontend via `go:embed`).
 ├── apps/
 │   ├── backend/          Go API (net/http, no framework)
 │   │   ├── cmd/server/    entrypoint
-│   │   ├── internal/calculator/  arithmetic logic
+│   │   ├── internal/calculator/  pure math + domain errors
+│   │   ├── internal/service/     input validation + orchestration
 │   │   ├── internal/api/  HTTP handlers
 │   │   └── internal/web/  embeds the built frontend (go:embed)
 │   └── frontend/         React + TypeScript SPA (Vite)
@@ -25,6 +26,15 @@ serves the compiled frontend via `go:embed`).
 
 See [docs/architecture.md](docs/architecture.md) for the full design
 rationale and [docs/api.md](docs/api.md) for the API contract.
+
+## API
+
+`POST` JSON to any of: `/api/add`, `/api/subtract`, `/api/multiply`,
+`/api/divide`, `/api/power`, `/api/sqrt`, `/api/percentage`. Every endpoint
+returns `{ "result": <number> }` or `{ "error": "<message>" }`. Invalid
+input (malformed JSON, non-finite numbers) and domain errors (division by
+zero, negative square root, undefined exponentiation) are reported as
+`400`. Full request/response shapes: [docs/api.md](docs/api.md).
 
 ## Requirements
 
@@ -87,7 +97,11 @@ cd apps/frontend && npm install && npm test
   frontend work; the Go server runs separately so backend changes don't
   require a frontend rebuild. `docker-compose.yml` wires them together with
   a proxy so routing matches production.
-- **No web framework on the backend** — the API is one endpoint plus a
-  health check; `net/http.ServeMux` is enough.
+- **No web framework on the backend** — `net/http.ServeMux`'s method-aware
+  routing (Go 1.22+) is enough for a handful of routes plus a health check.
+- **Three backend layers** — handlers (`internal/api`) only know HTTP;
+  the service (`internal/service`) validates operands and orchestrates;
+  the calculator (`internal/calculator`) is pure, dependency-free math.
+  Each layer is independently unit tested.
 
 Full detail in [docs/architecture.md](docs/architecture.md).

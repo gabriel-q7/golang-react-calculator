@@ -1,45 +1,71 @@
-// Package calculator implements the arithmetic core of the application.
+// Package calculator implements the pure arithmetic core of the
+// application. Functions here have no knowledge of HTTP, JSON, or
+// validation policy — they only encode the mathematical domain rules
+// (e.g. division by zero, negative square roots).
 package calculator
 
-import "fmt"
-
-// Operator identifies a supported arithmetic operation.
-type Operator string
-
-const (
-	Add      Operator = "add"
-	Subtract Operator = "subtract"
-	Multiply Operator = "multiply"
-	Divide   Operator = "divide"
+import (
+	"errors"
+	"math"
 )
 
-// ErrDivisionByZero is returned when a Divide operation has a zero divisor.
-var ErrDivisionByZero = fmt.Errorf("division by zero")
+// ErrDivisionByZero is returned when a division or exponentiation would
+// require dividing by zero (e.g. 0 raised to a negative exponent).
+var ErrDivisionByZero = errors.New("division by zero")
 
-// ErrUnsupportedOperator is returned when Operator is not one of the known constants.
-type ErrUnsupportedOperator struct {
-	Operator Operator
+// ErrNegativeSqrt is returned when Sqrt is called with a negative operand.
+var ErrNegativeSqrt = errors.New("cannot take the square root of a negative number")
+
+// ErrUndefinedResult is returned when an operation has no real-valued
+// result, such as a negative base raised to a fractional exponent.
+var ErrUndefinedResult = errors.New("operation has no defined real result")
+
+// Add returns a + b.
+func Add(a, b float64) float64 {
+	return a + b
 }
 
-func (e ErrUnsupportedOperator) Error() string {
-	return fmt.Sprintf("unsupported operator: %q", e.Operator)
+// Subtract returns a - b.
+func Subtract(a, b float64) float64 {
+	return a - b
 }
 
-// Calculate applies op to a and b, returning the result.
-func Calculate(a, b float64, op Operator) (float64, error) {
-	switch op {
-	case Add:
-		return a + b, nil
-	case Subtract:
-		return a - b, nil
-	case Multiply:
-		return a * b, nil
-	case Divide:
-		if b == 0 {
-			return 0, ErrDivisionByZero
-		}
-		return a / b, nil
-	default:
-		return 0, ErrUnsupportedOperator{Operator: op}
+// Multiply returns a * b.
+func Multiply(a, b float64) float64 {
+	return a * b
+}
+
+// Divide returns a / b, or ErrDivisionByZero if b is zero.
+func Divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, ErrDivisionByZero
 	}
+	return a / b, nil
+}
+
+// Power returns base raised to the power of exponent.
+func Power(base, exponent float64) (float64, error) {
+	if base == 0 && exponent < 0 {
+		return 0, ErrDivisionByZero
+	}
+
+	result := math.Pow(base, exponent)
+	if math.IsNaN(result) {
+		return 0, ErrUndefinedResult
+	}
+	return result, nil
+}
+
+// Sqrt returns the square root of value, or ErrNegativeSqrt if value is
+// negative.
+func Sqrt(value float64) (float64, error) {
+	if value < 0 {
+		return 0, ErrNegativeSqrt
+	}
+	return math.Sqrt(value), nil
+}
+
+// Percentage returns percent% of value, i.e. (value * percent) / 100.
+func Percentage(value, percent float64) float64 {
+	return value * percent / 100
 }

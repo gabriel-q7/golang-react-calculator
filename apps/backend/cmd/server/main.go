@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"calculator-backend/internal/api"
+	"calculator-backend/internal/service"
 	"calculator-backend/internal/web"
 )
 
@@ -18,12 +19,17 @@ func main() {
 		port = "8080"
 	}
 
-	mux := api.NewMux()
-
 	dist, err := fs.Sub(web.DistFS, "dist")
 	if err != nil {
 		log.Fatalf("load embedded frontend: %v", err)
 	}
+
+	// Mounted on its own "/api/" subtree so that unmatched or wrong-method
+	// API requests get the API's 404/405 handling, instead of falling
+	// through to the SPA file server below (which would 404 on its own
+	// terms for e.g. GET /api/add).
+	mux := http.NewServeMux()
+	mux.Handle("/api/", api.NewMux(service.New()))
 	mux.Handle("/", http.FileServer(http.FS(dist)))
 
 	addr := ":" + port

@@ -19,19 +19,40 @@ buildable pieces that ship as **one** deployable artifact:
 
 - `apps/frontend/` — React + TypeScript SPA built with Vite. Talks to the
   backend over `/api/*`.
-- `apps/backend/` — Go HTTP server. `internal/calculator` holds the pure
-  arithmetic logic, `internal/api` exposes it over JSON, `internal/web`
-  embeds the compiled frontend via `go:embed` so the server can serve it
-  directly.
+- `apps/backend/` — Go HTTP server, split into three layers (see below):
+  `internal/api` (handlers), `internal/service` (validation/orchestration),
+  `internal/calculator` (pure math). `internal/web` embeds the compiled
+  frontend via `go:embed` so the server can serve it directly.
 - `docs/` — this folder.
+
+## Backend layering
+
+```
+internal/api          HTTP handlers: decode/encode JSON, route,
+   │                   map errors → status codes
+   ▼
+internal/service       Validates operands are finite numbers,
+   │                   delegates to calculator, no HTTP knowledge
+   ▼
+internal/calculator    Pure math + domain errors (division by zero,
+                       negative sqrt, undefined results). No I/O.
+```
+
+Each layer is independently unit tested: `calculator` tests are pure
+table-driven math tests, `service` tests cover validation and error
+propagation, `api` tests exercise full HTTP request/response cycles via
+`httptest`. See [api.md](api.md) for the endpoint list.
 
 ## Request flow
 
 1. Browser loads `/` → Go server returns the embedded SPA (`index.html`,
    JS, CSS bundles).
-2. SPA calls `POST /api/calculate` with `{a, b, operator}`.
-3. `internal/api` decodes the request, calls `internal/calculator.Calculate`,
-   and returns `{result}` or `{error}` with an appropriate HTTP status.
+2. SPA calls e.g. `POST /api/divide` with `{a, b}`.
+3. The handler decodes the request and calls the matching
+   `CalculatorService` method, which validates the operands and delegates
+   to `internal/calculator`.
+4. The handler returns `{result}` on success, or `{error}` with `400`
+   (invalid/domain error), `404` (unknown route), or `405` (wrong method).
 
 ## Why a single container in production
 
