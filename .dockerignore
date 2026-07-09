@@ -1,0 +1,6 @@
+.git
+.claude
+docs
+**/node_modules
+apps/frontend/dist
+*.md

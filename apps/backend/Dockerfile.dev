@@ -1,0 +1,14 @@
+# Development image: run the Go server straight from source with the repo
+# bind-mounted, so code changes only need a `go run` restart, not a rebuild.
+FROM golang:1.23-alpine
+
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["go", "run", "./cmd/server"]
