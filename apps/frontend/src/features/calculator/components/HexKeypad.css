@@ -1,38 +1,52 @@
 /*
  * Honeycomb keypad geometry. Hexagons are "pointy-top" (clip-path below),
- * which gives each one a full-height flat edge on its left and right —
- * same-row neighbors are placed edge-to-edge with no gap. Alternating rows
- * are shifted right by half a hex width and pulled up by 25% of a hex's
- * height (row-step = 75% of height), which is what makes the points of one
- * row nest into the notches of the next, producing a seamless honeycomb
- * instead of a plain grid of touching hexagons.
+ * which gives each one a full-height flat edge on its left and right, so
+ * same-row neighbors placed exactly one hex-width apart touch edge-to-edge.
+ * Each key's horizontal position is `--x` hex-widths from the keypad's left
+ * edge (a plain number set per-row in HexKeypad.tsx — rows don't all start
+ * at the same `--x`, which is what staggers them into a honeycomb instead
+ * of a grid), and its vertical position is `--row` row-steps down, where a
+ * row-step is 75% of a hex's height — the remaining 25% is how much each
+ * row nests into the notch of the row above it.
+ *
+ * Every key is rendered 1px wider/taller than its nominal hex-width/height
+ * and pulled back by 0.5px on each side. That's a deliberate ~0.5px
+ * overlap: adjacent hexagons round to slightly different device pixels
+ * depending on browser/zoom, and without the overlap that shows up as a
+ * hairline gap (the page background peeking through); overlapping instead
+ * just means two coincident fills, which is invisible.
  */
 .hex-keypad {
   --hex-w: clamp(3.1rem, 10.5vw, 4.6rem);
   --hex-h: calc(var(--hex-w) * 1.1547);
   --row-step: calc(var(--hex-h) * 0.75);
   position: relative;
-  width: calc(var(--hex-w) * 3.75);
+  width: calc(var(--hex-w) * 5);
   max-width: 100%;
-  height: calc(var(--row-step) * 6 + var(--hex-h));
+  height: calc(var(--row-step) * 4 + var(--hex-h));
   margin-inline: auto;
 }
 
 .hex-btn {
   --key-color: var(--neon-cyan);
   position: absolute;
-  left: calc(
-    var(--hex-w) * 0.25 + var(--col) * var(--hex-w) + var(--stagger) * (var(--hex-w) / 2)
-  );
-  top: calc(var(--row) * var(--row-step));
-  width: var(--hex-w);
-  height: var(--hex-h);
+  left: calc(var(--x) * var(--hex-w) - 0.5px);
+  top: calc(var(--row) * var(--row-step) - 0.5px);
+  width: calc(var(--hex-w) + 1px);
+  height: calc(var(--hex-h) + 1px);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0;
   padding: 0;
   border: none;
+  /* Tailwind's preflight sets `appearance: button` on every <button>,
+     which pulls in native OS button chrome (bezel/inset shading). That
+     chrome isn't properly clipped by clip-path in all browsers and shows
+     up as hairline seams between adjacent hexagons — appearance: none
+     removes it so only our own background/clip-path render. */
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background: linear-gradient(160deg, rgba(24, 15, 51, 0.92), rgba(9, 5, 20, 0.96));

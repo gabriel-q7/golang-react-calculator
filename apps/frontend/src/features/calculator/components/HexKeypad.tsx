@@ -31,32 +31,67 @@ function operatorKey(
   return { label: symbol, ariaLabel, variant, action: { kind: "operator", operator: symbol } };
 }
 
+const backspaceKey: KeyDef = {
+  label: "⌫",
+  ariaLabel: "backspace",
+  variant: "control",
+  action: { kind: "backspace" },
+};
+const decimalKey: KeyDef = {
+  label: ".",
+  ariaLabel: "decimal point",
+  variant: "control",
+  action: { kind: "decimal" },
+};
+const clearKey: KeyDef = {
+  label: "C",
+  ariaLabel: "all clear",
+  variant: "control",
+  action: { kind: "clear" },
+};
+const equalsKey: KeyDef = {
+  label: "=",
+  ariaLabel: "equals",
+  variant: "equals",
+  action: { kind: "equals" },
+};
+
+interface RowDef {
+  /** Horizontal start position, in hex-widths, of this row's first key. */
+  startOffset: number;
+  keys: KeyDef[];
+}
+
 /**
- * 7 rows x 3 keys, alternating rows staggered by half a hex width (see
- * HexKeypad.css) so every key shares an edge with its neighbors — this is
- * the layout, and its geometry is the layer that makes it a honeycomb
- * rather than a plain grid.
+ * Conventional physical-calculator arrangement, kept as a single connected
+ * honeycomb: digits 7-9/4-6/1-3/0 form a contiguous block on the left, the
+ * primary arithmetic operators (÷ × − +) sit in a dedicated column on the
+ * right of that block (one per digit row), and the remaining secondary
+ * actions (C, √, ^, %, =) form the bottom row. Every key's `startOffset`
+ * (row) plus its index (column) is its position in hex-widths.
+ *
+ * Honeycomb nesting requires each row's `startOffset` to differ from the
+ * row immediately above/below it by exactly 0.5 (half a hex-width) — that
+ * half-step is what makes one row's hexagons sit in the notches of the
+ * next. Every row here alternates 0 / 0.5, including the last one; skip a
+ * beat (e.g. two rows in a row at the same offset, or a jump of a full 1)
+ * and that row visibly stops lining up with its neighbor.
  */
-const ROWS: KeyDef[][] = [
-  [digitKey("7"), digitKey("8"), digitKey("9")],
-  [operatorKey("÷", "divide"), operatorKey("×", "multiply"), operatorKey("−", "subtract")],
-  [digitKey("4"), digitKey("5"), digitKey("6")],
-  [
-    operatorKey("^", "power", "operator-alt"),
-    operatorKey("√", "square root", "operator-alt"),
-    operatorKey("%", "percent", "operator-alt"),
-  ],
-  [digitKey("1"), digitKey("2"), digitKey("3")],
-  [
-    { label: "C", ariaLabel: "all clear", variant: "control", action: { kind: "clear" } },
-    { label: "⌫", ariaLabel: "backspace", variant: "control", action: { kind: "backspace" } },
-    operatorKey("+", "add"),
-  ],
-  [
-    digitKey("0"),
-    { label: ".", ariaLabel: "decimal point", variant: "control", action: { kind: "decimal" } },
-    { label: "=", ariaLabel: "equals", variant: "equals", action: { kind: "equals" } },
-  ],
+const ROWS: RowDef[] = [
+  { startOffset: 0, keys: [digitKey("7"), digitKey("8"), digitKey("9"), operatorKey("÷", "divide")] },
+  { startOffset: 0.5, keys: [digitKey("4"), digitKey("5"), digitKey("6"), operatorKey("×", "multiply")] },
+  { startOffset: 0, keys: [digitKey("1"), digitKey("2"), digitKey("3"), operatorKey("−", "subtract")] },
+  { startOffset: 0.5, keys: [backspaceKey, digitKey("0"), decimalKey, operatorKey("+", "add")] },
+  {
+    startOffset: 0,
+    keys: [
+      clearKey,
+      operatorKey("√", "square root", "operator-alt"),
+      operatorKey("^", "power", "operator-alt"),
+      operatorKey("%", "percent", "operator-alt"),
+      equalsKey,
+    ],
+  },
 ];
 
 export interface HexKeypadProps {
@@ -92,7 +127,7 @@ export function HexKeypad({ engine }: HexKeypadProps) {
   return (
     <div className="hex-keypad" role="group" aria-label="Calculator keypad">
       {ROWS.map((row, rowIndex) =>
-        row.map((key, colIndex) => (
+        row.keys.map((key, keyIndex) => (
           <HexButton
             key={key.ariaLabel}
             label={key.label}
@@ -103,8 +138,7 @@ export function HexKeypad({ engine }: HexKeypadProps) {
             gridStyle={
               {
                 "--row": rowIndex,
-                "--col": colIndex,
-                "--stagger": rowIndex % 2,
+                "--x": row.startOffset + keyIndex,
               } as CSSProperties
             }
           />
