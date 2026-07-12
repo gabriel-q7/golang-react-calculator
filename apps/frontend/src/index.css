@@ -18,53 +18,47 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-neon-pink: var(--neon-pink);
+  --color-neon-cyan: var(--neon-cyan);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-blue: var(--neon-blue);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 }
 
+/*
+ * Vaporwave theme: fixed dark palette (not adaptive to system light/dark),
+ * since the calculator's whole identity is the neon-on-dark look. Colors
+ * are hand-picked (not generated) to keep the neon-text-on-dark-fill pairs
+ * at or above WCAG AA contrast (~4.5:1+) — see docs/adr for the readings.
+ */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-  }
+  --neon-pink: #ff3ec8;
+  --neon-cyan: #2de2e6;
+  --neon-purple: #b249f8;
+  --neon-blue: #4d7bff;
+
+  --background: #0b0618;
+  --foreground: #f4f1ff;
+  --card: #150c2e;
+  --card-foreground: #f4f1ff;
+  --primary: var(--neon-pink);
+  --primary-foreground: #180a24;
+  --secondary: #1f1440;
+  --secondary-foreground: #f4f1ff;
+  --muted: #1c1338;
+  --muted-foreground: #b9acdc;
+  --accent: #241a4d;
+  --accent-foreground: #f4f1ff;
+  --destructive: #ff5c8a;
+  --destructive-foreground: #1a0410;
+  --border: rgba(178, 73, 248, 0.35);
+  --input: rgba(178, 73, 248, 0.25);
+  --ring: var(--neon-cyan);
 }
 
 @layer base {
@@ -72,6 +66,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(178, 73, 248, 0.22), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 110%, rgba(45, 226, 230, 0.14), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }

@@ -1,0 +1,128 @@
+/*
+ * Honeycomb keypad geometry. Hexagons are "pointy-top" (clip-path below),
+ * which gives each one a full-height flat edge on its left and right —
+ * same-row neighbors are placed edge-to-edge with no gap. Alternating rows
+ * are shifted right by half a hex width and pulled up by 25% of a hex's
+ * height (row-step = 75% of height), which is what makes the points of one
+ * row nest into the notches of the next, producing a seamless honeycomb
+ * instead of a plain grid of touching hexagons.
+ */
+.hex-keypad {
+  --hex-w: clamp(3.1rem, 10.5vw, 4.6rem);
+  --hex-h: calc(var(--hex-w) * 1.1547);
+  --row-step: calc(var(--hex-h) * 0.75);
+  position: relative;
+  width: calc(var(--hex-w) * 3.75);
+  max-width: 100%;
+  height: calc(var(--row-step) * 6 + var(--hex-h));
+  margin-inline: auto;
+}
+
+.hex-btn {
+  --key-color: var(--neon-cyan);
+  position: absolute;
+  left: calc(
+    var(--hex-w) * 0.25 + var(--col) * var(--hex-w) + var(--stagger) * (var(--hex-w) / 2)
+  );
+  top: calc(var(--row) * var(--row-step));
+  width: var(--hex-w);
+  height: var(--hex-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(160deg, rgba(24, 15, 51, 0.92), rgba(9, 5, 20, 0.96));
+  color: var(--key-color);
+  font-size: clamp(1rem, 2.3vw, 1.3rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--key-color) 55%, transparent);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--key-color) 40%, transparent));
+  transition:
+    transform 150ms ease,
+    filter 150ms ease,
+    background 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hex-btn span {
+  transform: translateY(-1px);
+}
+
+.hex-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--key-color) 20%, #180f33),
+    rgba(9, 5, 20, 0.96)
+  );
+  filter: drop-shadow(0 0 8px var(--key-color))
+    drop-shadow(0 0 18px color-mix(in srgb, var(--key-color) 65%, transparent));
+}
+
+.hex-btn:active:not(:disabled) {
+  transform: scale(0.92);
+  filter: drop-shadow(0 0 3px var(--key-color));
+}
+
+.hex-btn:focus-visible {
+  outline: none;
+  z-index: 2;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px var(--key-color))
+    drop-shadow(0 0 22px var(--key-color));
+}
+
+.hex-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: none;
+}
+
+.hex-btn--digit {
+  --key-color: var(--neon-cyan);
+}
+
+.hex-btn--operator {
+  --key-color: var(--neon-pink);
+}
+
+.hex-btn--operator-alt {
+  --key-color: var(--neon-purple);
+}
+
+.hex-btn--control {
+  --key-color: var(--neon-blue);
+}
+
+.hex-btn--equals {
+  --key-color: var(--neon-blue);
+  color: #f4f1ff;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--neon-blue) 55%, #150c2e),
+    color-mix(in srgb, var(--neon-pink) 35%, #0b0618)
+  );
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--neon-cyan) 55%, transparent);
+  filter: drop-shadow(0 0 6px var(--neon-blue))
+    drop-shadow(0 0 14px color-mix(in srgb, var(--neon-pink) 55%, transparent));
+}
+
+.hex-btn--equals:hover:not(:disabled) {
+  filter: drop-shadow(0 0 10px var(--neon-blue)) drop-shadow(0 0 22px var(--neon-pink));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hex-btn {
+    transition:
+      filter 150ms ease,
+      background 150ms ease;
+  }
+  .hex-btn:hover:not(:disabled),
+  .hex-btn:active:not(:disabled) {
+    transform: none;
+  }
+}

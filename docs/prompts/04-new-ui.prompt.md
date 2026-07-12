@@ -1,0 +1,5 @@
+Redesign the calculator UI so that it resembles a physical calculator with a display area showing the current expression and result. Replace the current controls with a connected honeycomb layout in which all digit and operator buttons are contiguous hexagons sharing edges, forming a single cohesive keypad rather than isolated buttons. 
+
+Use React, TypeScript, Tailwind CSS, and shadcn/ui, extending them with custom CSS (for example, using `clip-path`) as needed. Apply a vaporwave aesthetic with a dark background, neon pink, cyan, purple, and blue accents, subtle glow effects, and smooth hover/press animations while maintaining accessibility and sufficient contrast. 
+
+Ensure the existing calculator functionality continues to use the backend API without regression, keep the components modular and testable, update any affected tests, and create an Architecture Decision Record in `docs/adr` documenting the rationale for adopting the connected hexagonal keypad and vaporwave theme, including alternatives considered and their trade-offs.

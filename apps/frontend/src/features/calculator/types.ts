@@ -24,3 +24,10 @@ export interface OperationConfig {
   endpoint: string;
   fields: FieldConfig[];
 }
+
+/** Symbol shown on a keypad key. "√" is unary (acts on the display
+ * immediately); the rest are binary (operand, operator, operand, "="). */
+export type OperatorSymbol = "+" | "−" | "×" | "÷" | "^" | "%" | "√";
+
+/** OperatorSymbol minus the one unary operator. */
+export type BinaryOperatorSymbol = Exclude<OperatorSymbol, "√">;
