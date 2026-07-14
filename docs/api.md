@@ -8,15 +8,18 @@ JSON body and returns `{ "result": <number> }` on success, or
 
 ## Architecture
 
-Requests flow through three layers (see
+Requests flow through the following layers (see
 [architecture.md](architecture.md)):
 
-1. **`internal/api`** — HTTP handlers. Decode/encode JSON, route to the
-   service, map errors to status codes.
+1. **`internal/api`** — HTTP handlers and rate-limit middleware.
+   Decode/encode JSON, route to the service, map errors to status codes.
 2. **`internal/service`** — validates that operands are finite numbers
-   (rejects `NaN`/`Infinity`), then delegates to the calculator.
-3. **`internal/calculator`** — pure math functions and domain errors
-   (division by zero, negative square root, undefined results).
+   (rejects `NaN`/`Infinity`), resolves the named operation, and
+   delegates to it.
+3. **`internal/operations`** — one independent implementation per
+   operation (add, subtract, multiply, divide, power, sqrt, percentage)
+   plus the domain errors each can produce (division by zero, negative
+   square root, undefined results).
 
 ## Error responses
 
@@ -25,6 +28,7 @@ Requests flow through three layers (see
 | `400`  | Malformed/unknown JSON fields, non-finite operand, or a domain error (division by zero, negative square root, undefined exponentiation result) |
 | `404`  | Unknown route                                                           |
 | `405`  | Wrong HTTP method for a known route                                    |
+| `429`  | Rate limit exceeded for the client's IP (see [Rate limiting](#rate-limiting)) |
 
 ## `GET /api/health`
 
@@ -186,4 +190,30 @@ Returns `percent`% of `value`, i.e. `(value * percent) / 100`.
 
 ```json
 { "error": "input must be a finite number" }
+```
+
+## Rate limiting
+
+Every operation endpoint above (everything except `GET /api/health`) is
+rate-limited **per client IP**, using a token-bucket limiter
+([`golang.org/x/time/rate`](https://pkg.go.dev/golang.org/x/time/rate)).
+There's no authentication in this app, so IP is the only client identity
+available — see
+[docs/adr/0003-solid-refactor-and-rate-limiting.md](adr/0003-solid-refactor-and-rate-limiting.md)
+for the reasoning, limitations, and how this evolves if auth is added.
+
+Configured via environment variables on the server (defaults shown):
+
+| Variable            | Default | Meaning                                      |
+| -------------------- | ------- | ----------------------------------------------- |
+| `RATE_LIMIT_RPM`      | `60`    | Requests per minute allowed per IP, steady-state |
+| `RATE_LIMIT_BURST`    | `10`    | Requests a single IP may fire instantaneously before the per-minute rate applies |
+
+**Response `429` — rate limit exceeded**
+
+Includes a `Retry-After` header (seconds); body uses the same shape as
+every other error:
+
+```json
+{ "error": "rate limit exceeded, try again later" }
 ```

@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"calculator-backend/internal/api"
+	"calculator-backend/internal/operations"
 	"calculator-backend/internal/service"
 )
 
 // resultBody and errorBody mirror the JSON contract documented in
 // docs/api.md. They're defined here, not imported from internal/api,
 // because these tests exercise the HTTP/JSON interface only — the
-// package's own (unexported) request/response types are an implementation
-// detail the tests have no business depending on.
+// package's own (unexported) response types are an implementation detail
+// the tests have no business depending on.
 type resultBody struct {
 	Result float64 `json:"result"`
 }
@@ -24,8 +25,17 @@ type errorBody struct {
 	Error string `json:"error"`
 }
 
-func newTestMux() *http.ServeMux {
-	return api.NewMux(service.New())
+// newTestMux builds a mux with rate limiting disabled (nil limiter), so
+// these functional tests can fire as many requests as they like without
+// tripping a limit — rate limiting itself is covered separately in
+// middleware_test.go, against a mux built with a real, tiny limiter.
+func newTestMux(t *testing.T) *http.ServeMux {
+	t.Helper()
+	registry, err := operations.Default()
+	if err != nil {
+		t.Fatalf("operations.Default() error = %v", err)
+	}
+	return api.NewMux(service.New(registry), registry.All(), nil)
 }
 
 func doRequest(t *testing.T, mux *http.ServeMux, method, path string, body any) *httptest.ResponseRecorder {
@@ -67,14 +77,14 @@ func decodeError(t *testing.T, rec *httptest.ResponseRecorder) errorBody {
 }
 
 func TestHandleHealth(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodGet, "/api/health", nil)
+	rec := doRequest(t, newTestMux(t), http.MethodGet, "/api/health", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 }
 
 func TestHandleAdd(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/add", map[string]float64{"a": 2, "b": 3})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/add", map[string]float64{"a": 2, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -84,7 +94,7 @@ func TestHandleAdd(t *testing.T) {
 }
 
 func TestHandleSubtract(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/subtract", map[string]float64{"a": 5, "b": 3})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/subtract", map[string]float64{"a": 5, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -94,7 +104,7 @@ func TestHandleSubtract(t *testing.T) {
 }
 
 func TestHandleMultiply(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/multiply", map[string]float64{"a": 4, "b": 3})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/multiply", map[string]float64{"a": 4, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -104,7 +114,7 @@ func TestHandleMultiply(t *testing.T) {
 }
 
 func TestHandleDivide(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", map[string]float64{"a": 9, "b": 3})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/divide", map[string]float64{"a": 9, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -114,7 +124,7 @@ func TestHandleDivide(t *testing.T) {
 }
 
 func TestHandleDivide_ByZero(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", map[string]float64{"a": 1, "b": 0})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/divide", map[string]float64{"a": 1, "b": 0})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
@@ -124,7 +134,7 @@ func TestHandleDivide_ByZero(t *testing.T) {
 }
 
 func TestHandlePower(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", map[string]float64{"base": 2, "exponent": 10})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/power", map[string]float64{"base": 2, "exponent": 10})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -134,14 +144,14 @@ func TestHandlePower(t *testing.T) {
 }
 
 func TestHandlePower_UndefinedResult(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", map[string]float64{"base": -4, "exponent": 0.5})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/power", map[string]float64{"base": -4, "exponent": 0.5})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
 }
 
 func TestHandleSqrt(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", map[string]float64{"value": 9})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/sqrt", map[string]float64{"value": 9})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -151,7 +161,7 @@ func TestHandleSqrt(t *testing.T) {
 }
 
 func TestHandleSqrt_Negative(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", map[string]float64{"value": -4})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/sqrt", map[string]float64{"value": -4})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
@@ -161,7 +171,7 @@ func TestHandleSqrt_Negative(t *testing.T) {
 }
 
 func TestHandlePercentage(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/percentage", map[string]float64{"value": 200, "percent": 10})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/percentage", map[string]float64{"value": 200, "percent": 10})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -171,7 +181,7 @@ func TestHandlePercentage(t *testing.T) {
 }
 
 func TestHandle_InvalidJSON(t *testing.T) {
-	mux := newTestMux()
+	mux := newTestMux(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/add", bytes.NewReader([]byte("{not json")))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -182,7 +192,7 @@ func TestHandle_InvalidJSON(t *testing.T) {
 }
 
 func TestHandle_UnknownFields(t *testing.T) {
-	mux := newTestMux()
+	mux := newTestMux(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/add", bytes.NewReader([]byte(`{"a":1,"b":2,"operator":"add"}`)))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -193,14 +203,14 @@ func TestHandle_UnknownFields(t *testing.T) {
 }
 
 func TestHandle_MethodNotAllowed(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodGet, "/api/add", nil)
+	rec := doRequest(t, newTestMux(t), http.MethodGet, "/api/add", nil)
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 	}
 }
 
 func TestHandle_UnknownRoute(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/modulo", map[string]float64{"a": 1, "b": 2})
+	rec := doRequest(t, newTestMux(t), http.MethodPost, "/api/modulo", map[string]float64{"a": 1, "b": 2})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
 	}

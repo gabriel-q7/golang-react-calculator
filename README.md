@@ -11,9 +11,10 @@ serves the compiled frontend via `go:embed`).
 ├── apps/
 │   ├── backend/          Go API (net/http, no framework)
 │   │   ├── cmd/server/    entrypoint
-│   │   ├── internal/calculator/  pure math + domain errors
-│   │   ├── internal/service/     input validation + orchestration
-│   │   ├── internal/api/  HTTP handlers
+│   │   ├── internal/operations/  Operation interface + 7 implementations + registry
+│   │   ├── internal/service/     resolves + validates + executes an operation
+│   │   ├── internal/api/  HTTP handlers + rate-limit middleware
+│   │   ├── internal/ratelimit/  per-IP token-bucket limiter
 │   │   ├── internal/web/  embeds the built frontend (go:embed)
 │   │   └── tests/         all *_test.go files (see "Testing" below)
 │   └── frontend/         React + TypeScript SPA (Vite, Tailwind, shadcn/ui)
@@ -36,14 +37,31 @@ rationale, [docs/api.md](docs/api.md) for the API contract, and
 [docs/adr/](docs/adr/) for the reasoning behind specific decisions (the
 hex-keypad/vaporwave UI, separating tests from production code, etc).
 
-## API
+## Backend
 
 `POST` JSON to any of: `/api/add`, `/api/subtract`, `/api/multiply`,
 `/api/divide`, `/api/power`, `/api/sqrt`, `/api/percentage`. Every endpoint
 returns `{ "result": <number> }` or `{ "error": "<message>" }`. Invalid
-input (malformed JSON, non-finite numbers) and domain errors (division by
-zero, negative square root, undefined exponentiation) are reported as
-`400`. Full request/response shapes: [docs/api.md](docs/api.md).
+input (malformed JSON, non-finite numbers), domain errors (division by
+zero, negative square root, undefined exponentiation), and rate limiting
+are all reported with that same `{ "error": ... }` shape (`400`/`429`).
+Full request/response shapes: [docs/api.md](docs/api.md).
+
+Each operation is an independent `operations.Operation` implementation
+(`internal/operations/`) — a `Registry` resolves them by name, so the
+service and HTTP layers never enumerate operations themselves. Adding an
+8th operation is: implement `Operation`, register it in
+`operations.Default()`, done. See
+[docs/adr/0003-solid-refactor-and-rate-limiting.md](docs/adr/0003-solid-refactor-and-rate-limiting.md)
+for the full rationale.
+
+Every operation route is also rate-limited per client IP (not the health
+check), configurable via `RATE_LIMIT_RPM` (default `60`) and
+`RATE_LIMIT_BURST` (default `10`) environment variables:
+
+```bash
+docker run -p 8080:8080 -e RATE_LIMIT_RPM=120 -e RATE_LIMIT_BURST=20 calculator:latest
+```
 
 ## Frontend
 
@@ -125,11 +143,11 @@ apps — see
 for the rationale.
 
 **Backend** — `apps/backend/tests/` mirrors `internal/`'s package layout
-(`tests/calculator/`, `tests/service/`, `tests/api/`). Every test file is
-an external test package (`package calculator_test`, importing
-`calculator-backend/internal/calculator`), so tests only exercise each
-package's exported API — the same constraint an outside consumer of the
-package would have.
+(`tests/operations/`, `tests/service/`, `tests/api/`, `tests/ratelimit/`).
+Every test file is an external test package (`package operations_test`,
+importing `calculator-backend/internal/operations`), so tests only
+exercise each package's exported API — the same constraint an outside
+consumer of the package would have.
 
 **Frontend** — `apps/frontend/tests/` mirrors `src/features/calculator/`.
 Tests import production code via the `@/` alias (e.g.
@@ -164,10 +182,19 @@ cd apps/frontend && npm run coverage                                # coverage m
   a proxy so routing matches production.
 - **No web framework on the backend** — `net/http.ServeMux`'s method-aware
   routing (Go 1.22+) is enough for a handful of routes plus a health check.
-- **Three backend layers** — handlers (`internal/api`) only know HTTP;
-  the service (`internal/service`) validates operands and orchestrates;
-  the calculator (`internal/calculator`) is pure, dependency-free math.
-  Each layer is independently unit tested.
+- **Backend built around a small `Operation` abstraction** — handlers
+  (`internal/api`) only know HTTP; the service (`internal/service`)
+  validates operands and resolves an operation by name through a
+  1-method `OperationResolver` interface; each operation
+  (`internal/operations`) is its own type knowing only its own math. New
+  operations are additive (Open/Closed), and each layer only depends on
+  interfaces, not the layer below's concrete types (Dependency
+  Inversion) — see
+  [docs/adr/0003-solid-refactor-and-rate-limiting.md](docs/adr/0003-solid-refactor-and-rate-limiting.md).
+- **IP-based rate limiting, no auth** — the frontend has no login, so a
+  per-IP token bucket (`internal/ratelimit`, `golang.org/x/time/rate`) is
+  the cheapest meaningful abuse guard available; see the same ADR for why,
+  and how it's designed to swap for auth-based limiting later.
 - **Frontend organized by feature, not by file type** — `validation/`,
   `api/`, `engine/`, `hooks/`, and `components/` inside
   `features/calculator/` each have one job and are independently testable,
