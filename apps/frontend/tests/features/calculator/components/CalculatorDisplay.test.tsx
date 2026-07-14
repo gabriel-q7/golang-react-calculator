@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { CalculatorDisplay } from "./CalculatorDisplay";
+import { CalculatorDisplay } from "@/features/calculator/components/CalculatorDisplay";
 
 describe("CalculatorDisplay", () => {
   it("shows the expression and current value", () => {

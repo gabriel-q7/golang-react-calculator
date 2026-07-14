@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CalculatorPage } from "./CalculatorPage";
+import { CalculatorPage } from "@/features/calculator/components/CalculatorPage";
 
 function mockFetchOk(result: number) {
   vi.stubGlobal(

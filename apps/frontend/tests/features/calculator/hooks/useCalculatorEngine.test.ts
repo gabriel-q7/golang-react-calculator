@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useCalculatorEngine } from "./useCalculatorEngine";
+import { useCalculatorEngine } from "@/features/calculator/hooks/useCalculatorEngine";
 
 function mockFetchOnce(result: number) {
   vi.stubGlobal(

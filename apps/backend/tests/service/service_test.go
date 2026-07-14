@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"errors"
@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"calculator-backend/internal/calculator"
+	"calculator-backend/internal/service"
 )
 
 func TestCalculatorService_Arithmetic(t *testing.T) {
-	svc := New()
+	svc := service.New()
 
 	if got, err := svc.Add(2, 3); err != nil || got != 5 {
 		t.Fatalf("Add() = %v, %v, want 5, nil", got, err)
@@ -35,7 +36,7 @@ func TestCalculatorService_Arithmetic(t *testing.T) {
 }
 
 func TestCalculatorService_DomainErrors(t *testing.T) {
-	svc := New()
+	svc := service.New()
 
 	if _, err := svc.Divide(1, 0); !errors.Is(err, calculator.ErrDivisionByZero) {
 		t.Fatalf("Divide() error = %v, want %v", err, calculator.ErrDivisionByZero)
@@ -49,7 +50,7 @@ func TestCalculatorService_DomainErrors(t *testing.T) {
 }
 
 func TestCalculatorService_InvalidInput(t *testing.T) {
-	svc := New()
+	svc := service.New()
 
 	cases := []struct {
 		name string
@@ -66,8 +67,8 @@ func TestCalculatorService_InvalidInput(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := tt.call(); !errors.Is(err, ErrInvalidInput) {
-				t.Fatalf("error = %v, want %v", err, ErrInvalidInput)
+			if _, err := tt.call(); !errors.Is(err, service.ErrInvalidInput) {
+				t.Fatalf("error = %v, want %v", err, service.ErrInvalidInput)
 			}
 		})
 	}

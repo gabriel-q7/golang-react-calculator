@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { evaluateBinary, evaluateSqrt } from "./operations";
+import { evaluateBinary, evaluateSqrt } from "@/features/calculator/engine/operations";
 
 function mockFetchOk(result: number) {
   vi.stubGlobal(

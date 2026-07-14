@@ -14,22 +14,27 @@ serves the compiled frontend via `go:embed`).
 │   │   ├── internal/calculator/  pure math + domain errors
 │   │   ├── internal/service/     input validation + orchestration
 │   │   ├── internal/api/  HTTP handlers
-│   │   └── internal/web/  embeds the built frontend (go:embed)
+│   │   ├── internal/web/  embeds the built frontend (go:embed)
+│   │   └── tests/         all *_test.go files (see "Testing" below)
 │   └── frontend/         React + TypeScript SPA (Vite, Tailwind, shadcn/ui)
-│       └── src/
-│           ├── components/ui/       shadcn/ui primitives (Button, Card, Tabs, ...)
-│           ├── features/calculator/  feature module (see below)
-│           └── lib/                  shared helpers (`cn` class merger)
+│       ├── src/
+│       │   ├── components/ui/       shadcn/ui primitives (Button, Card, Alert, ...)
+│       │   ├── features/calculator/  feature module (see below)
+│       │   └── lib/                  shared helpers (`cn` class merger)
+│       └── tests/        all *.test.ts(x) files (see "Testing" below)
 ├── docs/
 │   ├── architecture.md  system design and rationale
-│   └── api.md           endpoint reference
+│   ├── api.md           endpoint reference
+│   └── adr/              Architecture Decision Records
 ├── docker-compose.yml    local dev stack (hot-reloading, two containers)
 ├── Dockerfile            production image (multi-stage, single container)
 └── Makefile
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the full design
-rationale and [docs/api.md](docs/api.md) for the API contract.
+rationale, [docs/api.md](docs/api.md) for the API contract, and
+[docs/adr/](docs/adr/) for the reasoning behind specific decisions (the
+hex-keypad/vaporwave UI, separating tests from production code, etc).
 
 ## API
 
@@ -42,29 +47,29 @@ zero, negative square root, undefined exponentiation) are reported as
 
 ## Frontend
 
-React + TypeScript, styled with Tailwind CSS v4 and shadcn/ui components.
-One tabbed card per operation (Add, Subtract, Multiply, Divide, Power,
-Square Root, Percentage); each tab is a self-contained form with its own
-inputs, validation state, and result/error display. Layout is responsive
-— the tab bar scrolls horizontally and labels collapse to symbols on
-narrow screens.
+React + TypeScript, styled with Tailwind CSS v4 and shadcn/ui, themed as a
+dark "vaporwave" physical calculator: a display (running expression +
+current value) above a honeycomb keypad of hexagonal keys. See
+[docs/adr/0001-hex-keypad-vaporwave-theme.md](docs/adr/0001-hex-keypad-vaporwave-theme.md)
+for why.
 
 `apps/frontend/src/features/calculator/` is organized by concern:
 
-| Path             | Responsibility                                                     |
-| ----------------- | --------------------------------------------------------------------- |
-| `config.ts`        | Declarative list of operations (id, label, endpoint, fields)          |
+| Path              | Responsibility                                                                   |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `config.ts`        | Declarative list of the 7 backend operations (id, label, endpoint, fields)        |
 | `validation/`      | Pure functions: parse a field to a number, run client-side domain checks (e.g. reject division by zero) before any request is sent |
-| `api/`             | `postCalculate` — the only place that calls `fetch`                   |
-| `hooks/`           | `useOperationForm` — wires validation + API calls to form state       |
-| `components/`      | `OperationCard` (one operation's form) and `CalculatorPage` (tab shell) |
+| `api/`             | `postCalculate` — the only place that calls `fetch`                              |
+| `engine/`          | `reducer.ts` (calculator state machine), `operations.ts` (operator → endpoint), `format.ts` (display number formatting) |
+| `hooks/`           | `useCalculatorEngine` — wires the reducer + API calls together                   |
+| `components/`      | `HexButton`/`HexKeypad` (the keypad), `CalculatorDisplay`, `CalculatorPage`       |
 
 Client-side validation mirrors the backend's rules (division by zero,
 negative square root, etc.) so obviously-invalid requests never round-trip
 to the API — but the backend remains the source of truth and re-validates
 independently. `components/ui/` holds the shadcn/ui primitives (Button,
-Input, Card, Tabs, Alert), hand-authored against this project's Tailwind
-theme rather than pulled in via the shadcn CLI, since only a handful of
+Input, Card, Alert), hand-authored against this project's Tailwind theme
+rather than pulled in via the shadcn CLI, since only a handful of
 components are needed.
 
 ## Requirements
@@ -112,11 +117,40 @@ compiled frontend.
 | `make coverage`   | Generate coverage reports for backend and frontend     |
 | `make clean`      | Remove containers, volumes, `node_modules`, build output |
 
-## Running tests without Docker
+## Testing
+
+Test code is kept out of the production packages/source tree in both
+apps — see
+[docs/adr/0002-separate-test-code-from-production-code.md](docs/adr/0002-separate-test-code-from-production-code.md)
+for the rationale.
+
+**Backend** — `apps/backend/tests/` mirrors `internal/`'s package layout
+(`tests/calculator/`, `tests/service/`, `tests/api/`). Every test file is
+an external test package (`package calculator_test`, importing
+`calculator-backend/internal/calculator`), so tests only exercise each
+package's exported API — the same constraint an outside consumer of the
+package would have.
+
+**Frontend** — `apps/frontend/tests/` mirrors `src/features/calculator/`.
+Tests import production code via the `@/` alias (e.g.
+`@/features/calculator/engine/format`) rather than relative paths, so a
+test's location never has to match the file it's testing, and production
+code never imports from `tests/` (no risk of a circular dependency).
+`tests/setup.ts` (jest-dom matchers) is the one non-test file in that
+tree.
+
+Run them:
 
 ```bash
-cd apps/backend && go test ./...
-cd apps/frontend && npm install && npm test
+# from the repo root
+make test              # backend + frontend
+make coverage          # backend + frontend, with coverage reports
+
+# directly
+cd apps/backend && go test ./...                                   # tests/... has the actual tests
+cd apps/backend && go test ./tests/... -coverpkg=./internal/... -coverprofile=coverage.out
+cd apps/frontend && npm test                                       # runs tests/**/*.test.{ts,tsx}
+cd apps/frontend && npm run coverage                                # coverage measured over src/, not tests/
 ```
 
 ## Design rationale (short version)
@@ -135,7 +169,12 @@ cd apps/frontend && npm install && npm test
   the calculator (`internal/calculator`) is pure, dependency-free math.
   Each layer is independently unit tested.
 - **Frontend organized by feature, not by file type** — `validation/`,
-  `api/`, `hooks/`, and `components/` inside `features/calculator/` are
-  each independently testable and reusable across the 7 operation forms.
+  `api/`, `engine/`, `hooks/`, and `components/` inside
+  `features/calculator/` each have one job and are independently testable,
+  so the keypad UI, the calculator state machine, and the API client can
+  all change without touching each other.
+- **Test code lives outside the production tree** (`apps/*/tests/`, not
+  colocated) — see
+  [docs/adr/0002-separate-test-code-from-production-code.md](docs/adr/0002-separate-test-code-from-production-code.md).
 
 Full detail in [docs/architecture.md](docs/architecture.md).

@@ -1,4 +1,4 @@
-package api
+package api_test
 
 import (
 	"bytes"
@@ -7,11 +7,25 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"calculator-backend/internal/api"
 	"calculator-backend/internal/service"
 )
 
+// resultBody and errorBody mirror the JSON contract documented in
+// docs/api.md. They're defined here, not imported from internal/api,
+// because these tests exercise the HTTP/JSON interface only — the
+// package's own (unexported) request/response types are an implementation
+// detail the tests have no business depending on.
+type resultBody struct {
+	Result float64 `json:"result"`
+}
+
+type errorBody struct {
+	Error string `json:"error"`
+}
+
 func newTestMux() *http.ServeMux {
-	return NewMux(service.New())
+	return api.NewMux(service.New())
 }
 
 func doRequest(t *testing.T, mux *http.ServeMux, method, path string, body any) *httptest.ResponseRecorder {
@@ -34,18 +48,18 @@ func doRequest(t *testing.T, mux *http.ServeMux, method, path string, body any) 
 	return rec
 }
 
-func decodeResult(t *testing.T, rec *httptest.ResponseRecorder) calculateResponse {
+func decodeResult(t *testing.T, rec *httptest.ResponseRecorder) resultBody {
 	t.Helper()
-	var resp calculateResponse
+	var resp resultBody
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	return resp
 }
 
-func decodeError(t *testing.T, rec *httptest.ResponseRecorder) errorResponse {
+func decodeError(t *testing.T, rec *httptest.ResponseRecorder) errorBody {
 	t.Helper()
-	var resp errorResponse
+	var resp errorBody
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode error response: %v", err)
 	}
@@ -60,7 +74,7 @@ func TestHandleHealth(t *testing.T) {
 }
 
 func TestHandleAdd(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/add", binaryRequest{A: 2, B: 3})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/add", map[string]float64{"a": 2, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -70,7 +84,7 @@ func TestHandleAdd(t *testing.T) {
 }
 
 func TestHandleSubtract(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/subtract", binaryRequest{A: 5, B: 3})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/subtract", map[string]float64{"a": 5, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -80,7 +94,7 @@ func TestHandleSubtract(t *testing.T) {
 }
 
 func TestHandleMultiply(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/multiply", binaryRequest{A: 4, B: 3})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/multiply", map[string]float64{"a": 4, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -90,7 +104,7 @@ func TestHandleMultiply(t *testing.T) {
 }
 
 func TestHandleDivide(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", binaryRequest{A: 9, B: 3})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", map[string]float64{"a": 9, "b": 3})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -100,7 +114,7 @@ func TestHandleDivide(t *testing.T) {
 }
 
 func TestHandleDivide_ByZero(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", binaryRequest{A: 1, B: 0})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/divide", map[string]float64{"a": 1, "b": 0})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
@@ -110,7 +124,7 @@ func TestHandleDivide_ByZero(t *testing.T) {
 }
 
 func TestHandlePower(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", powerRequest{Base: 2, Exponent: 10})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", map[string]float64{"base": 2, "exponent": 10})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -120,14 +134,14 @@ func TestHandlePower(t *testing.T) {
 }
 
 func TestHandlePower_UndefinedResult(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", powerRequest{Base: -4, Exponent: 0.5})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/power", map[string]float64{"base": -4, "exponent": 0.5})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
 }
 
 func TestHandleSqrt(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", sqrtRequest{Value: 9})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", map[string]float64{"value": 9})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -137,7 +151,7 @@ func TestHandleSqrt(t *testing.T) {
 }
 
 func TestHandleSqrt_Negative(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", sqrtRequest{Value: -4})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/sqrt", map[string]float64{"value": -4})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
@@ -147,7 +161,7 @@ func TestHandleSqrt_Negative(t *testing.T) {
 }
 
 func TestHandlePercentage(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/percentage", percentageRequest{Value: 200, Percent: 10})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/percentage", map[string]float64{"value": 200, "percent": 10})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -186,7 +200,7 @@ func TestHandle_MethodNotAllowed(t *testing.T) {
 }
 
 func TestHandle_UnknownRoute(t *testing.T) {
-	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/modulo", binaryRequest{A: 1, B: 2})
+	rec := doRequest(t, newTestMux(), http.MethodPost, "/api/modulo", map[string]float64{"a": 1, "b": 2})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
 	}

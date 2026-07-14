@@ -1,25 +1,27 @@
-package calculator
+package calculator_test
 
 import (
 	"errors"
 	"math"
 	"testing"
+
+	"calculator-backend/internal/calculator"
 )
 
 func TestAdd(t *testing.T) {
-	if got := Add(2, 3); got != 5 {
+	if got := calculator.Add(2, 3); got != 5 {
 		t.Fatalf("Add() = %v, want 5", got)
 	}
 }
 
 func TestSubtract(t *testing.T) {
-	if got := Subtract(5, 3); got != 2 {
+	if got := calculator.Subtract(5, 3); got != 2 {
 		t.Fatalf("Subtract() = %v, want 2", got)
 	}
 }
 
 func TestMultiply(t *testing.T) {
-	if got := Multiply(4, 3); got != 12 {
+	if got := calculator.Multiply(4, 3); got != 12 {
 		t.Fatalf("Multiply() = %v, want 12", got)
 	}
 }
@@ -34,13 +36,13 @@ func TestDivide(t *testing.T) {
 		{"basic", 9, 3, 3, nil},
 		{"negative divisor", 9, -3, -3, nil},
 		{"fractional result", 1, 4, 0.25, nil},
-		{"by zero", 1, 0, 0, ErrDivisionByZero},
-		{"zero by zero", 0, 0, 0, ErrDivisionByZero},
+		{"by zero", 1, 0, 0, calculator.ErrDivisionByZero},
+		{"zero by zero", 0, 0, 0, calculator.ErrDivisionByZero},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Divide(tt.a, tt.b)
+			got, err := calculator.Divide(tt.a, tt.b)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Divide() error = %v, want %v", err, tt.wantErr)
 			}
@@ -53,23 +55,23 @@ func TestDivide(t *testing.T) {
 
 func TestPower(t *testing.T) {
 	tests := []struct {
-		name             string
-		base, exponent   float64
-		want             float64
-		wantErr          error
+		name           string
+		base, exponent float64
+		want           float64
+		wantErr        error
 	}{
 		{"basic", 2, 10, 1024, nil},
 		{"zero exponent", 5, 0, 1, nil},
 		{"negative exponent", 2, -2, 0.25, nil},
 		{"fractional exponent", 4, 0.5, 2, nil},
 		{"zero base positive exponent", 0, 3, 0, nil},
-		{"zero base negative exponent", 0, -1, 0, ErrDivisionByZero},
-		{"negative base fractional exponent", -4, 0.5, 0, ErrUndefinedResult},
+		{"zero base negative exponent", 0, -1, 0, calculator.ErrDivisionByZero},
+		{"negative base fractional exponent", -4, 0.5, 0, calculator.ErrUndefinedResult},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Power(tt.base, tt.exponent)
+			got, err := calculator.Power(tt.base, tt.exponent)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Power() error = %v, want %v", err, tt.wantErr)
 			}
@@ -90,12 +92,12 @@ func TestSqrt(t *testing.T) {
 		{"perfect square", 9, 3, nil},
 		{"zero", 0, 0, nil},
 		{"non-perfect square", 2, math.Sqrt(2), nil},
-		{"negative", -4, 0, ErrNegativeSqrt},
+		{"negative", -4, 0, calculator.ErrNegativeSqrt},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Sqrt(tt.value)
+			got, err := calculator.Sqrt(tt.value)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Sqrt() error = %v, want %v", err, tt.wantErr)
 			}
@@ -120,7 +122,7 @@ func TestPercentage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Percentage(tt.value, tt.percent); got != tt.want {
+			if got := calculator.Percentage(tt.value, tt.percent); got != tt.want {
 				t.Fatalf("Percentage() = %v, want %v", got, tt.want)
 			}
 		})

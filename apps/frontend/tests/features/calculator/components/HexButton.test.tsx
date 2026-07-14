@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { HexButton } from "./HexButton";
+import { HexButton } from "@/features/calculator/components/HexButton";
 
 describe("HexButton", () => {
   it("renders its label and accessible name", () => {

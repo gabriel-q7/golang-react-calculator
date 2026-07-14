@@ -27,7 +27,7 @@ test-frontend:
 coverage: coverage-backend coverage-frontend
 
 coverage-backend:
-	cd apps/backend && go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out
+	cd apps/backend && go test ./tests/... -coverpkg=./internal/... -coverprofile=coverage.out && go tool cover -func=coverage.out
 
 coverage-frontend:
 	cd apps/frontend && npm install --no-audit --no-fund && npm run coverage

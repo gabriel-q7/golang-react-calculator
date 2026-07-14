@@ -24,10 +24,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: "./src/setupTests.ts",
+    include: ["tests/**/*.{test,spec}.{ts,tsx}"],
+    setupFiles: "./tests/setup.ts",
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.d.ts", "src/main.tsx"],
     },
   },
 });

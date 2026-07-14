@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { HexKeypad } from "./HexKeypad";
-import type { CalculatorEngine } from "../hooks/useCalculatorEngine";
+import { HexKeypad } from "@/features/calculator/components/HexKeypad";
+import type { CalculatorEngine } from "@/features/calculator/hooks/useCalculatorEngine";
 
 function makeEngine(overrides: Partial<CalculatorEngine> = {}): CalculatorEngine {
   return {

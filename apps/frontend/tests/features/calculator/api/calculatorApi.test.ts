@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { postCalculate } from "./calculatorApi";
+import { postCalculate } from "@/features/calculator/api/calculatorApi";
 
 describe("postCalculate", () => {
   afterEach(() => {

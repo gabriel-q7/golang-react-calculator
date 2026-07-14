@@ -3,4 +3,8 @@
 docs
 **/node_modules
 apps/frontend/dist
+apps/frontend/tests
+apps/frontend/coverage
+apps/backend/tests
+apps/backend/coverage.out
 *.md

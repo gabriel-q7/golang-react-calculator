@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseFieldValue, validateOperation } from "./validateOperation";
+import { parseFieldValue, validateOperation } from "@/features/calculator/validation/validateOperation";
 
 describe("parseFieldValue", () => {
   it("parses a valid integer", () => {

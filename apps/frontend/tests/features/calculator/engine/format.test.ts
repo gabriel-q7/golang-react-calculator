@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatNumber } from "./format";
+import { formatNumber } from "@/features/calculator/engine/format";
 
 describe("formatNumber", () => {
   it("prints whole numbers with no decimal noise", () => {
